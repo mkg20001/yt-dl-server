@@ -1,0 +1,28 @@
+{
+  "name": "yt-dl-server",
+  "version": "0.0.0",
+  "description": "Yet another YouTube-Dl Server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "youtube-dl",
+    "server"
+  ],
+  "author": "Maciej Krüger <mkg20001@gmail.com>",
+  "license": "MPL-2.0",
+  "files": [
+    "src/*.js",
+    "assets"
+  ],
+  "devDependencies": {
+    "material-design-lite": "^1.3.0",
+    "parcel-bundler": "^1.9.7"
+  },
+  "dependencies": {
+    "bull": "^3.4.8",
+    "hapi": "^17.5.4",
+    "mongoose": "^5.2.15"
+  }
+}
