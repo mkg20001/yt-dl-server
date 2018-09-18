@@ -4,14 +4,9 @@ const Hapi = require('hapi')
 const Queue = require('bull')
 
 const downloadQueue = new Queue('youtube-dl')
-const server = Hapi.server({
-  port: 5344,
-  host: 'localhost'
-})
 const Joi = require('joi')
 
 const mongoose = require('mongoose')
-mongoose.connect('mongodb://localhost/yt-dl-server')
 
 const {Schema} = require('mongoose')
 
@@ -26,7 +21,10 @@ const MediaSchema = new Schema({
 })
 const Media = mongoose.model('Media', MediaSchema)
 
-const init = async () => {
+const init = async (config) => {
+  mongoose.connect(config.mongodb, {useNewUrlParser: true})
+
+  const server = Hapi.server(config.hapi)
   await server.start()
 
   server.route({
@@ -118,4 +116,4 @@ process.on('unhandledRejection', (err) => {
   process.exit(1)
 })
 
-init()
+module.exports = init
