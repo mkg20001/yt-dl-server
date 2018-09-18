@@ -70,11 +70,10 @@ const init = async (config) => {
     method: 'GET',
     path: '/download/status/{dbid}',
     handler: async (request, h) => {
-      const dbId = request.params.dbid
-      const db = await Media.findOne({id: dbId}).exec()
+      const db = await Media.findOne({id: request.params.dbid}).exec()
 
       if (!db) {
-        // TODO: 404 resp
+        return h.response({error: 'Resource not found'}).code(404)
       }
 
       if (db.isFinished) {
@@ -97,11 +96,10 @@ const init = async (config) => {
     method: 'GET',
     path: '/download/{dbid}',
     handler: async (request, h) => {
-      const dbId = request.params.dbid
-      const db = await Media.findOne({id: dbId}).exec()
+      const db = await Media.findOne({id: request.params.dbid}).exec()
 
       if (!db) {
-        // TODO: 404 resp
+        return h.response({error: 'Resource not found'}).code(404)
       }
 
       // TODO: stream blob to client
