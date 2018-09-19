@@ -102,18 +102,16 @@ const init = async (config) => {
   })
   metaQueue.process(w(async (job) => {
     const {url} = job.data
-    let out
     log.info({url}, 'Downloading metadata for %s', url)
     try {
-      out = await ytdl('-F', url)
+      await metaCache.set(url, await ytdl.getFormatsForUrl(url))
+      log.info({url}, 'Metadata download for %s succeeded', url)
     } catch (e) {
       e.url = url
       log.error(e, 'Metadata download for %s failed', url)
       await metaCache.set(url, {error: true})
       return {}
     }
-
-    console.log(out.stdout.toString())
   }))
 
   server.route({

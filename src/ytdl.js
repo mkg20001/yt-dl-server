@@ -2,25 +2,62 @@
 
 const cp = require('child_process')
 const bl = require('bl')
-module.exports = (...args) => {
+const ytdl = module.exports = (...args) => {
   return new Promise((resolve, reject) => {
     const p = cp.spawn('youtube-dl', args, {stdio: 'pipe'})
     p.once('error', reject)
     let out = bl()
     let err = bl()
     p.stdout.pipe(out)
-    p.stdout = bl
+    p.stdout = out
     p.stderr.pipe(err)
     p.stderr = err
+    p.debugErr = (e) => {
+      e.cmd = args
+      e.stderr = String(p.stderr)
+      e.stdout = String(p.stdout)
+      e.stack += `\n --- YT DL ---\n CMD: ${args.map(JSON.stringify).join(' ')}\n STDERR: \n${e.stderr}\n STDOUT: \n${e.stdout}\n --- YT DL ---`
+      return e
+    }
     p.once('close', (ex, sig) => {
       if (ex || sig) {
         let e = new Error('Failed with ' + (ex || sig))
-        e.cmd = args
-        e.stderr = String(p.stderr)
-        e.stack += `\n --- YT DL ---\n CMD: ${args.map(JSON.stringify).join(' ')}\n STDERR: \n${e.stderr}\n --- YT DL ---`
-        return reject(e)
+        return reject(p.debugErr(e))
       }
       resolve(p)
     })
   })
+}
+
+const fmtTable = [
+  ['code', 13, s => parseInt(s.trim(), 10)],
+  ['ext', 11, s => s.trim()],
+  ['res', 11, s => s.trim()],
+  ['note', 100, s => s]
+]
+
+ytdl.getFormatsForUrl = async (url) => {
+  const out = await ytdl('-F', url)
+  const log = String(out.stdout)
+  if (log.indexOf('format code') === -1) {
+    throw out.debugErr(new Error('Format code not found in table'))
+  }
+
+  let f = false
+  let data = log.split('\n').filter(l => {
+    if (l.startsWith('format code')) {
+      f = true
+    } else if (f && l.trim()) {
+      return true
+    }
+  }).map(l => {
+    let out = {}
+    fmtTable.forEach(col => {
+      out[col[0]] = col[2](l.substr(0, col[1]))
+      l = l.substr(col[1])
+    })
+    return out
+  })
+
+  return data
 }
