@@ -22,4 +22,5 @@ parts:
       - youtube-dl
   yt-dl-server:
     plugin: nodejs
+    node-version: 10.10.0
     source: .
