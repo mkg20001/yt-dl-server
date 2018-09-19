@@ -2,9 +2,15 @@
 
 const Hapi = require('hapi')
 const Queue = require('bull')
+const CatboxMongoDB = require('catbox-mongodb')
 
 const downloadQueue = new Queue('youtube-dl')
+const metaQueue = new Queue('youtube-dl-meta')
 const Joi = require('joi')
+
+const wait = i => new Promise((resolve, reject) => setTimeout(resolve, i))
+const base64 = require('urlsafe-base64')
+const ytdl = require('./ytdl')
 
 const mongoose = require('mongoose')
 
@@ -24,8 +30,79 @@ const Media = mongoose.model('Media', MediaSchema)
 const init = async (config) => {
   mongoose.connect(config.mongodb, {useNewUrlParser: true})
 
+  config.hapi.cache = [{
+    name: 'mongoDbCache',
+    engine: CatboxMongoDB,
+    uri: config.mongodb,
+    partition: config.mongodb.split('/').pop().split('?').shift()
+  }]
+
   const server = Hapi.server(config.hapi)
   await server.start()
+
+  const metaCache = server.cache({segment: 'sessions', expiresIn: 3600 * 1000})
+  server.route({
+    method: 'POST',
+    path: '/meta/queue',
+    config: {
+      validate: {
+        payload: {
+          url: Joi.string()
+        }
+      }
+    },
+    handler: async (request, h) => {
+      // TODO: url cleanup
+
+      const {url} = request.payload
+
+      let cached = await metaCache.get(url)
+
+      if (!cached) { // scheudle cache fetch
+        let job = await metaQueue.add({url})
+        metaCache.set(url, {wip: job.id})
+      }
+
+      return {id: base64.encode(Buffer.from(url))} // I'm using id here so this can be transparently swapped if needed
+    }
+  })
+  server.route({
+    method: 'GET',
+    path: '/meta/{id}',
+    config: {
+      validate: {
+        params: {
+          id: Joi.string()
+        }
+      }
+    },
+    handler: async (request, h) => {
+      const url = String(base64.decode(request.params.id))
+      let i = 5
+      while (i--) {
+        const cached = await metaCache.get(url)
+        if (!cached) {
+          return {404: true}
+        }
+        if (cached.wip) {
+          await wait(1000)
+        } else {
+          cached.done = true
+          return cached
+        }
+      }
+
+      return {done: false}
+    }
+  })
+  metaQueue.process(async (job) => {
+    const {url} = job.data
+    try {
+      await ytdl('-F', url)
+    } catch (e) {
+      return metaCache.set(url, {error: true})
+    }
+  })
 
   server.route({
     method: 'POST',
@@ -44,7 +121,7 @@ const init = async (config) => {
     },
     handler: async (request, h) => {
       const data = request.payload
-      const downloaded = await Media.findOne(data, cb).exec()
+      const downloaded = await Media.findOne(data).exec()
 
       let db
 
@@ -52,16 +129,15 @@ const init = async (config) => {
         db = downloaded
       } else {
         db = new Media(data)
-        db.fetchedAt = Date.now()
         await db.save().exec()
         data.dbId = db._id
-        const queueItem = downloadQueue.add(data)
-        // TODO: store bull queue id
+        const job = await downloadQueue.add(data)
+        db.jobId = job.id
       }
 
       return {
-        dbId: data._id,
-        finished: data.isFinished
+        id: data._id,
+        finished: db.isFinished
       }
     }
   })
