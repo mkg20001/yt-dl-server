@@ -65,7 +65,9 @@ const init = async (config) => {
           let job = await metaQueue.add({url})
           metaCache.set(url, {wip: job.id})
         } else if (cached.wip) {
-          await wait(1000)
+          if (i) {
+            await wait(1000)
+          }
         } else {
           cached.done = true
           return cached
