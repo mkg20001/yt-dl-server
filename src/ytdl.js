@@ -2,7 +2,7 @@
 
 const cp = require('child_process')
 const bl = require('bl')
-const tmp = require('tmp')
+const tmp = require('./tmp')
 const fs = require('fs')
 const assert = require('assert')
 const path = require('path')
@@ -11,20 +11,18 @@ const debug = require('debug')
 const log = debug('yt-dl-server:youtube-dl')
 
 const ytdl = module.exports = (...args) => {
-  return new Promise((resolve, reject) => {
-    let tmpDir = tmp.dirSync()
+  return tmp().then(tmpDir => new Promise((resolve, reject) => {
     tmpDir.searchForExt = (ext) => {
-      let filesWithExt = fs.readdirSync(tmpDir.name).filter(name => name.endsWith('.' + ext))
+      let filesWithExt = fs.readdirSync(tmpDir.path).filter(name => name.endsWith('.' + ext))
       try {
         assert(filesWithExt.length === 1, 'File with ext ' + ext + ' not found')
       } catch (e) {
-        log('catch error', e)
         throw p.debugErr(e)
       }
-      return path.join(tmpDir.name, filesWithExt[0])
+      return path.join(tmpDir.path, filesWithExt[0])
     }
 
-    const cpArgs = ['youtube-dl', args, {stdio: 'pipe', cwd: tmpDir.name}]
+    const cpArgs = ['youtube-dl', args, {stdio: 'pipe', cwd: tmpDir.path}]
 
     log('running ytdl: %o', cpArgs)
 
@@ -40,7 +38,7 @@ const ytdl = module.exports = (...args) => {
     p.stderr = err
 
     p.cleanup = () => {
-      return p.tmp.removeCallback()
+      return p.tmp.cleanup()
     }
 
     p.debugErr = (e) => {
@@ -48,6 +46,7 @@ const ytdl = module.exports = (...args) => {
       e.stderr = String(p.stderr)
       e.stdout = String(p.stdout)
       e.stack += `\n --- YT DL ---\n CMD: ${args.map(JSON.stringify).join(' ')}\n STDERR: \n${e.stderr}\n STDOUT: \n${e.stdout}\n --- YT DL ---`
+      log('error', e)
       return e
     }
 
@@ -59,7 +58,7 @@ const ytdl = module.exports = (...args) => {
       }
       resolve(p)
     })
-  })
+  }))
 }
 
 const fmtTable = [
@@ -71,14 +70,17 @@ const fmtTable = [
 
 ytdl.getMetadata = async (url) => {
   const out = await ytdl('--write-info-json', '--skip-download', url)
+
   const infoJson = out.tmp.searchForExt('info.json')
   const meta = JSON.parse(String(fs.readFileSync(infoJson)))
-  meta.formatsParsed = await ytdl.getFormatsForUrl(url, infoJson)
+  meta.formatsParsed = await ytdl.parseFormatsInInfoJSON(url, infoJson)
+
+  out.cleanup()
 
   return meta
 }
 
-ytdl.getFormatsForUrl = async (url, infoJson) => {
+ytdl.parseFormatsInInfoJSON = async (url, infoJson) => {
   const out = await ytdl('--list-formats', url, '--load-info-json', infoJson)
   out.cleanup()
   const log = String(out.stdout)
