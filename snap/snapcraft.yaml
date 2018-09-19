@@ -7,6 +7,14 @@ description: |
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: strict
 
+apps:
+  yt-dl-server:
+    command: yt-dl-server
+    plugs: [network, network-bind]
+  youtube-dl:
+    command: youtube-dl
+    plugs: [network]
+
 parts:
   youtube-dl:
     plugin: python
