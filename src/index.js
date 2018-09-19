@@ -104,7 +104,7 @@ const init = async (config) => {
     const {url} = job.data
     log.info({url}, 'Downloading metadata for %s', url)
     try {
-      await metaCache.set(url, await ytdl.getFormatsForUrl(url))
+      await metaCache.set(url, await ytdl.getMetadata(url))
       log.info({url}, 'Metadata download for %s succeeded', url)
     } catch (e) {
       e.url = url
