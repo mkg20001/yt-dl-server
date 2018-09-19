@@ -14,7 +14,11 @@ module.exports = (...args) => {
     p.stderr = err
     p.once('close', (ex, sig) => {
       if (ex || sig) {
-        return reject(new Error('Failed with ' + (ex || sig)))
+        let e = new Error('Failed with ' + (ex || sig))
+        e.cmd = args
+        e.stderr = String(p.stderr)
+        e.stack += `\n --- YT DL ---\n CMD: ${args.map(JSON.stringify).join(' ')}\n STDERR: \n${e.stderr}\n --- YT DL ---`
+        return reject(e)
       }
       resolve(p)
     })

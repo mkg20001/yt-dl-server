@@ -12,6 +12,10 @@ const wait = i => new Promise((resolve, reject) => setTimeout(resolve, i))
 const base64 = require('urlsafe-base64')
 const ytdl = require('./ytdl')
 
+const pino = require('pino')
+const log = pino({name: 'yt-dl-server'})
+const w = (fnc) => (job, done) => fnc(job).then(r => done(r), done)
+
 const mongoose = require('mongoose')
 
 const {Schema} = require('mongoose')
@@ -59,6 +63,7 @@ const init = async (config) => {
       let cached = await metaCache.get(url)
 
       if (!cached) { // scheudle cache fetch
+        log.info({url}, 'Queue metadata download for %s', url)
         let job = await metaQueue.add({url})
         metaCache.set(url, {wip: job.id})
       }
@@ -95,14 +100,21 @@ const init = async (config) => {
       return {done: false}
     }
   })
-  metaQueue.process(async (job) => {
+  metaQueue.process(w(async (job) => {
     const {url} = job.data
+    let out
+    log.info({url}, 'Downloading metadata for %s', url)
     try {
-      await ytdl('-F', url)
+      out = await ytdl('-F', url)
     } catch (e) {
-      return metaCache.set(url, {error: true})
+      e.url = url
+      log.error(e, 'Metadata download for %s failed', url)
+      await metaCache.set(url, {error: true})
+      return {}
     }
-  })
+
+    console.log(out.stdout.toString())
+  }))
 
   server.route({
     method: 'POST',
