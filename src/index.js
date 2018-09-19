@@ -44,33 +44,7 @@ const init = async (config) => {
   const server = Hapi.server(config.hapi)
   await server.start()
 
-  const metaCache = server.cache({segment: 'sessions', expiresIn: 3600 * 1000})
-  server.route({
-    method: 'POST',
-    path: '/meta/queue',
-    config: {
-      validate: {
-        payload: {
-          url: Joi.string()
-        }
-      }
-    },
-    handler: async (request, h) => {
-      // TODO: url cleanup
-
-      const {url} = request.payload
-
-      let cached = await metaCache.get(url)
-
-      if (!cached) { // scheudle cache fetch
-        log.info({url}, 'Queue metadata download for %s', url)
-        let job = await metaQueue.add({url})
-        metaCache.set(url, {wip: job.id})
-      }
-
-      return {id: base64.encode(Buffer.from(url))} // I'm using id here so this can be transparently swapped if needed
-    }
-  })
+  const metaCache = server.cache({segment: 'metadata', expiresIn: 3600 * 1000})
   server.route({
     method: 'GET',
     path: '/meta/{id}',
@@ -86,10 +60,11 @@ const init = async (config) => {
       let i = 5
       while (i--) {
         const cached = await metaCache.get(url)
-        if (!cached) {
-          return {404: true}
-        }
-        if (cached.wip) {
+        if (!cached) { // scheudle cache fetch
+          log.info({url}, 'Queue metadata download for %s', url)
+          let job = await metaQueue.add({url})
+          metaCache.set(url, {wip: job.id})
+        } else if (cached.wip) {
           await wait(1000)
         } else {
           cached.done = true
