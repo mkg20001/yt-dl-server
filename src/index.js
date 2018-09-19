@@ -32,7 +32,7 @@ const MediaSchema = new Schema({
 const Media = mongoose.model('Media', MediaSchema)
 
 const init = async (config) => {
-  mongoose.connect(config.mongodb, {useNewUrlParser: true})
+  mongoose.connect(config.mongodb)
 
   config.hapi.cache = [{
     name: 'mongoDbCache',
@@ -169,7 +169,7 @@ const init = async (config) => {
     }
   })
 
-  console.log(`Server running at: ${server.info.uri}`)
+  log.info(server.info, 'Server online @ %s', server.info.uri)
 }
 
 process.on('unhandledRejection', (err) => {
