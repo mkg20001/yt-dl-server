@@ -103,7 +103,7 @@ const init = async (config) => {
       }
 
       return {
-        id: data._id,
+        id: db._id,
         finished: db.isFinished
       }
     }
@@ -194,7 +194,13 @@ const init = async (config) => {
     }
     log.info({url: db.url, out: db.stored}, 'Downloading %s', db.url)
 
-    await ytdl.downloadURL(db.url, {}, db.stored) // TODO: get and set progress
+    try {
+      await ytdl.downloadURL(db.url, {}, db.stored) // TODO: get and set progress
+    } catch (e) {
+      log.error(e)
+      await db.delete()
+      return
+    }
 
     db.size = 0 // TODO: set out size
     db.fetchedAt = Date.now()

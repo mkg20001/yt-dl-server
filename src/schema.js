@@ -13,13 +13,16 @@ module.exports = (config) => {
     queuedAt: { type: Date, default: Date.now },
     fetchedAt: { type: Date },
     downloadedAt: { type: Date },
-    isFinished: { type: Boolean },
     size: { type: Number },
     headers: { type: Object } // html content headers to set for dl
   })
 
   MediaSchema.virtual('stored').get(function () {
     return path.join(config.storage.location, this.get('id'))
+  })
+
+  MediaSchema.virtual('isFinished').get(function () {
+    return Boolean(this.get('fetchedAt'))
   })
 
   MediaSchema.pre('delete', function (next) {

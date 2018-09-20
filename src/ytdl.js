@@ -10,6 +10,9 @@ const path = require('path')
 const debug = require('debug')
 const log = debug('yt-dl-server:youtube-dl')
 
+const prom = require('promisify-es6')
+const mkdir = prom(require('mkdirp'))
+
 const ytdl = module.exports = (...args) => {
   return tmp().then(tmpDir => new Promise((resolve, reject) => {
     tmpDir.searchForExt = (ext) => {
@@ -113,7 +116,9 @@ ytdl.parseFormatsInInfoJSON = async (url, infoJson) => {
 ytdl.downloadURL = async (url, options, outFile) => {
   const out = await ytdl(url)
   // TODO: use options
+
   const tmpFile = out.tmp.searchForExt()
+  await mkdir(path.dirname(outFile), parseInt('700', 8))
   fs.renameSync(tmpFile, outFile)
   out.cleanup()
 }

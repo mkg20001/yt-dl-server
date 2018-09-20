@@ -13,7 +13,7 @@ module.exports = async () => {
   while (!dir || fs.existsSync(dir)) {
     dir = path.join(tmpDir, 'yt-dl-server', crypto.randomBytes(8).toString('hex'))
   }
-  await mkdir(dir, parseInt('777', 8))
+  await mkdir(dir, parseInt('700', 8))
   return {
     path: dir,
     cleanup: () => rimraf(dir)
