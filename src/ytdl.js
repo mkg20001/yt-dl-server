@@ -13,7 +13,10 @@ const log = debug('yt-dl-server:youtube-dl')
 const ytdl = module.exports = (...args) => {
   return tmp().then(tmpDir => new Promise((resolve, reject) => {
     tmpDir.searchForExt = (ext) => {
-      let filesWithExt = fs.readdirSync(tmpDir.path).filter(name => name.endsWith('.' + ext))
+      let filesWithExt = fs.readdirSync(tmpDir.path)
+      if (ext) {
+        filesWithExt = filesWithExt.filter(name => name.endsWith('.' + ext))
+      }
       try {
         assert(filesWithExt.length === 1, 'File with ext ' + ext + ' not found')
       } catch (e) {
@@ -105,4 +108,12 @@ ytdl.parseFormatsInInfoJSON = async (url, infoJson) => {
   })
 
   return data
+}
+
+ytdl.downloadURL = async (url, options, outFile) => {
+  const out = await ytdl(url)
+  // TODO: use options
+  const tmpFile = out.tmp.searchForExt()
+  fs.renameSync(tmpFile, outFile)
+  out.cleanup()
 }

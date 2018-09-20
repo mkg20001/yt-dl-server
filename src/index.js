@@ -20,7 +20,6 @@ const mongoose = require('mongoose')
 const Schema = require('./schema')
 
 const fs = require('fs')
-const path = require('path')
 
 const init = async (config) => {
   const {storage} = config
@@ -71,19 +70,6 @@ const init = async (config) => {
       return {done: false}
     }
   })
-  metaQueue.process(w(async (job) => {
-    const {url} = job.data
-    log.info({url}, 'Downloading metadata for %s', url)
-    try {
-      await metaCache.set(url, await ytdl.getMetadata(url))
-      log.info({url}, 'Metadata download for %s succeeded', url)
-    } catch (e) {
-      e.url = url
-      log.error(e, 'Metadata download for %s failed', url)
-      await metaCache.set(url, {error: true})
-      return {}
-    }
-  }))
 
   server.route({
     method: 'POST',
@@ -110,10 +96,10 @@ const init = async (config) => {
         db = downloaded
       } else {
         db = new Media(data)
-        await db.save().exec()
-        data.dbId = db._id
-        const job = await downloadQueue.add(data)
+        await db.save()
+        const job = await downloadQueue.add({db: db._id})
         db.jobId = job.id
+        await db.save()
       }
 
       return {
@@ -159,7 +145,7 @@ const init = async (config) => {
         return h.response({error: 'Resource not found'}).code(404)
       }
 
-      const stored = path.join(storage.location)
+      const stored = db.stored
 
       if (!fs.existsSync(stored)) {
         db.delete() // if this is missing then we could as well gc the db entry
@@ -180,12 +166,42 @@ const init = async (config) => {
         space += media.size
         if (space > storage.maxSpace) {
           log.info({url: media.url}, 'Deleting %s cached because maxSpace exceeded', media.url)
-          await media.delete().exec()
+          await media.delete()
         }
       }
     })])
     log.info('Finished cleanup')
   }, storage.cleanInterval)
+
+  metaQueue.process(w(async (job) => {
+    const {url} = job.data
+    log.info({url}, 'Downloading metadata for %s', url)
+    try {
+      await metaCache.set(url, await ytdl.getMetadata(url))
+      log.info({url}, 'Metadata download for %s succeeded', url)
+    } catch (e) {
+      e.url = url
+      log.error(e, 'Metadata download for %s failed', url)
+      await metaCache.set(url, {error: true})
+      return {}
+    }
+  }))
+
+  downloadQueue.process(w(async (job) => {
+    const db = await Media.findOne({_id: job.data.db}).exec()
+    if (!db) {
+      return log.warn('Task %s vanished', job.data.db)
+    }
+    log.info({url: db.url, out: db.stored}, 'Downloading %s', db.url)
+
+    await ytdl.downloadURL(db.url, {}, db.stored) // TODO: get and set progress
+
+    db.size = 0 // TODO: set out size
+    db.fetchedAt = Date.now()
+    await db.save()
+
+    log.info({url: db.url, out: db.stored}, 'Downloaded %s', db.url)
+  }))
 
   await server.start()
   log.info(server.info, 'Server online @ %s', server.info.uri)
