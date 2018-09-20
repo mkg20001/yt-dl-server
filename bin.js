@@ -23,12 +23,32 @@ const argv = require('yargs')
     type: 'string',
     default: '...'
   })
+  .option('space', {
+    describe: 'Maximum cache space usage in bytes (def 10GB)',
+    type: 'number',
+    default: 10 * Math.pow(1024, 3)
+  })
+  .option('storage', {
+    describe: 'Storage location',
+    type: 'string',
+    default: require('path').join(process.cwd(), 'storage')
+  })
+  .option('cleanInterval', {
+    describe: 'Cleaning interval in ms (def 1h)',
+    type: 'number',
+    default: 3600 * 1000
+  })
   .argv
 
 const config = {
   hapi: {
     port: argv.port,
     host: argv.host
+  },
+  storage: {
+    maxSpace: argv.space,
+    location: argv.storage,
+    cleanInterval: argv.cleanInterval
   },
   mongodb: argv.mongodb,
   redis: argv.redis

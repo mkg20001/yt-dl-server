@@ -17,21 +17,15 @@ const log = pino({name: 'yt-dl-server'})
 const w = (fnc) => (job, done) => fnc(job).then(r => done(r), done)
 
 const mongoose = require('mongoose')
+const Schema = require('./schema')
 
-const {Schema} = require('mongoose')
-
-const MediaSchema = new Schema({
-  url: { type: String, required: true },
-  quality: {
-    video: { type: String, required: true },
-    audio: { type: String, required: true }
-  },
-  format: { type: String, required: true },
-  fetchedAt: { type: Date, default: Date.now }
-})
-const Media = mongoose.model('Media', MediaSchema)
+const fs = require('fs')
+const path = require('path')
 
 const init = async (config) => {
+  const {storage} = config
+  const {Media} = Schema(config)
+
   mongoose.connect(config.mongodb)
 
   config.hapi.cache = [{
@@ -42,7 +36,7 @@ const init = async (config) => {
   }]
 
   const server = Hapi.server(config.hapi)
-  await server.start()
+  await server.register(require('inert'))
 
   const metaCache = server.cache({segment: 'metadata', expiresIn: 3600 * 1000})
   server.route({
@@ -97,12 +91,12 @@ const init = async (config) => {
     config: {
       validate: {
         payload: {
-          url: Joi.string(), // TODO: validate if url valid
-          quality: {
-            video: Joi.string(), // TODO: validate if valid
+          url: Joi.string() // TODO: validate if url valid
+          /* quality: {
+            video: Joi.string(),  TODO: validate if valid
             audio: Joi.string()
           },
-          format: Joi.string() // TODO: validate if valid
+          format: Joi.string() TODO: validate if valid */
         }
       }
     },
@@ -165,15 +159,40 @@ const init = async (config) => {
         return h.response({error: 'Resource not found'}).code(404)
       }
 
+      const stored = path.join(storage.location)
+
+      if (!fs.existsSync(stored)) {
+        db.delete() // if this is missing then we could as well gc the db entry
+        return h.response({error: 'Cached data not found'}).code(404)
+      }
+
       // TODO: stream blob to client
     }
   })
 
+  setInterval(async () => {
+    log.info('Starting cleanup')
+    const allMedia = await Media.find().exec()
+    let space = 0
+    const getTS = (e) => e.downloadedAt || e.fetchedAt || e.queuedAt
+    await Promise.all([allMedia.sort((a, b) => getTS(a) - getTS(b)).map(async (media) => {
+      if (media.isFinished) {
+        space += media.size
+        if (space > storage.maxSpace) {
+          log.info({url: media.url}, 'Deleting %s cached because maxSpace exceeded', media.url)
+          await media.delete().exec()
+        }
+      }
+    })])
+    log.info('Finished cleanup')
+  }, storage.cleanInterval)
+
+  await server.start()
   log.info(server.info, 'Server online @ %s', server.info.uri)
 }
 
 process.on('unhandledRejection', (err) => {
-  console.log(err)
+  console.log(err) // eslint-disable-line no-console
   process.exit(1)
 })
 
