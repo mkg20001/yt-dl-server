@@ -113,7 +113,7 @@ const init = async (config) => {
     method: 'GET',
     path: '/download/status/{dbid}',
     handler: async (request, h) => {
-      const db = await Media.findOne({id: request.params.dbid}).exec()
+      const db = await Media.findById(request.params.dbid).exec()
 
       if (!db) {
         return h.response({error: 'Resource not found'}).code(404)
@@ -139,20 +139,26 @@ const init = async (config) => {
     method: 'GET',
     path: '/download/{dbid}',
     handler: async (request, h) => {
-      const db = await Media.findOne({id: request.params.dbid}).exec()
+      const db = await Media.findById(request.params.dbid).exec()
 
       if (!db) {
         return h.response({error: 'Resource not found'}).code(404)
       }
 
-      const stored = db.stored
+      if (!db.isFinished) {
+        return h.response({error: 'Download didn\'t finish yet', advice: 'GET /download/status/' + db._id})
+      }
+
+      const {stored} = db
 
       if (!fs.existsSync(stored)) {
-        db.delete() // if this is missing then we could as well gc the db entry
+        await db.delete() // if this is missing then we could as well gc the db entry
         return h.response({error: 'Cached data not found'}).code(404)
       }
 
       // TODO: stream blob to client
+
+      return h.file(stored)
     }
   })
 
@@ -188,7 +194,7 @@ const init = async (config) => {
   }))
 
   downloadQueue.process(w(async (job) => {
-    const db = await Media.findOne({_id: job.data.db}).exec()
+    const db = await Media.findById(job.data.db).exec()
     if (!db) {
       return log.warn('Task %s vanished', job.data.db)
     }
