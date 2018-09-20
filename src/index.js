@@ -156,6 +156,9 @@ const init = async (config) => {
         return h.response({error: 'Cached data not found'}).code(404)
       }
 
+      db.downloadedAt = Date.now()
+      await db.save()
+
       // TODO: stream blob to client
 
       return h.file(stored)
@@ -208,7 +211,7 @@ const init = async (config) => {
       return
     }
 
-    db.size = 0 // TODO: set out size
+    db.size = fs.statSync(db.stored).size
     db.fetchedAt = Date.now()
     await db.save()
 
