@@ -5,7 +5,7 @@ function getFetch () {
     return require('node-fetch')
   }
   if (!window.fetch) {
-    require('node-fetch') // going to be replaced by whatwg-fetch
+    require('whatwg-fetch')
   }
   return window.fetch
 }
@@ -13,18 +13,18 @@ function getFetch () {
 const fetch = getFetch()
 const base64 = require('urlsafe-base64')
 
-module.exports = (url) => {
+module.exports = (api) => {
   function downloadById (id) {
     return {
       id,
       status: async () => {
-        let res = await fetch(url + '/download/status/' + id)
+        let res = await fetch(api + '/download/status/' + id)
         res = await res.json()
 
         return res
       },
       download: async () => {
-        let res = await fetch(url + '/download/' + id)
+        let res = await fetch(api + '/download/' + id)
         return res
       }
     }
@@ -33,7 +33,7 @@ module.exports = (url) => {
   return {
     metadata: async (url) => {
       while (true) {
-        let data = await fetch(url + '/meta/' + base64.encode(Buffer.from(url)))
+        let data = await fetch(api + '/meta/' + base64.encode(Buffer.from(url)))
         data = await data.json()
         if (data.done) {
           return data
@@ -41,7 +41,7 @@ module.exports = (url) => {
       }
     },
     download: async (url) => {
-      let res = await fetch(url + '/download/queue', {
+      let res = await fetch(api + '/download/queue', {
         method: 'POST',
         body: url
       })

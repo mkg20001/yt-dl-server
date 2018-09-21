@@ -33,9 +33,23 @@ const init = async (config) => {
     uri: mongodb,
     partition: mongodbDB
   }]
+  config.hapi.routes = {
+    cors: {
+      origin: process.env.NODE_ENV === 'production' ? [] : ['*'],
+      credentials: true
+    }
+  }
 
   const server = Hapi.server(config.hapi)
-  await server.register(require('inert'))
+
+  await server.register({
+    plugin: require('hapi-pino'),
+    options: {name: 'yt-dl-server'}
+  })
+
+  await server.register({
+    plugin: require('inert')
+  })
 
   const metaCache = server.cache({segment: 'metadata', expiresIn: 3600 * 1000})
   server.route({
@@ -219,7 +233,6 @@ const init = async (config) => {
   }))
 
   await server.start()
-  log.info(server.info, 'Server online @ %s', server.info.uri)
 }
 
 process.on('unhandledRejection', (err) => {
