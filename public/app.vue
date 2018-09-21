@@ -21,13 +21,22 @@
           </div>
         </center>
 
-        <br>
+        <div v-if="downloads.length">
+          <br>
 
-        <h1>Downloads</h1>
+          <h1>Downloads</h1>
 
-        <br>
-        <br>
-        <br>
+          <br>
+          <br>
+          <br>
+        </div>
+
+        <md-empty-state
+          v-else
+          md-icon="arrow_downward"
+          md-label="Download a video"
+          md-description="Downloaded videos will show up here once you download something">
+        </md-empty-state>
       </md-app-content>
       <md-app-content v-else>
         <md-content class="md-elevation-7" style="padding: 1em">
@@ -74,11 +83,6 @@
 
 <style lang="scss" scoped>
   /* TODO: use calc for all sizes */
-
-  .md-app {
-    max-height: 400px;
-    border: 1px solid rgba(#000, .12);
-  }
 
   .dl-btn {
     margin: .25em;
@@ -138,7 +142,8 @@ export default {
     isMetaView: false,
     meta: {},
     format: '',
-    dlRes: ''
+    dlRes: '',
+    downloads: []
   }),
   methods: {
     async downloadBtn() {
