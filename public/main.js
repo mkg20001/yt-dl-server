@@ -11,7 +11,7 @@ import app from './app.vue'
 
 window.onload = () => {
   new Vue({
-    el: '#app',
+    el: 'app',
     components: {
       app
     }
