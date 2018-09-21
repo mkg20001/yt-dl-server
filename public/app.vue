@@ -10,7 +10,7 @@
 
       <md-app-content v-if="!isMetaView">
         <center>
-          <div style="background: #00000011; border-radius: 6px; padding: 4px 16px !important; display: flex; margin: .5em 6em;">
+          <div class="url-field">
             <md-field>
               <md-input class="dl-input" :disabled="isDownloadingMeta" v-model="url" placeholder="YouTube URL or other media URL"></md-input>
             </md-field>
@@ -73,24 +73,50 @@
 </template>
 
 <style lang="scss" scoped>
+  /* TODO: use calc for all sizes */
+
   .md-app {
     max-height: 400px;
     border: 1px solid rgba(#000, .12);
   }
 
-   // Demo purposes only
-  .md-drawer {
-    width: 230px;
-    max-width: calc(100vw - 125px);
-  }
-
-  .md-app-content {
-    padding: 3em;
-    margin: -64px 12em 12em !important;
-  }
-
   .dl-btn {
-    margin: .75em;
+    margin: .25em;
+  }
+
+  .url-field {
+    background: #00000011;
+    border-radius: 6px;
+    padding: 4px 16px !important;
+    display: flex;
+    margin: .25em .5em;
+  }
+
+  .m-table {
+    display: flex;
+    flex-direction: column;
+  }
+  .m-table > * {
+    padding: 1em;
+  }
+
+  @media(min-width: 750px) {
+    .md-app-content {
+      padding: 3em;
+      margin: -64px 12em 12em !important;
+    }
+
+    .dl-btn {
+      margin: .75em;
+    }
+
+    .url-field {
+      margin: .5em 6em;
+    }
+
+    .m-table {
+      flex-direction: row;
+    }
   }
 
   .dl-input {
@@ -99,14 +125,6 @@
 
   .md-progress-spinner {
     margin: 24px;
-  }
-
-  .m-table {
-    display: flex;
-    flex-direction: row;
-  }
-  .m-table > * {
-    padding: 1em;
   }
 </style>
 
