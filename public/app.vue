@@ -39,6 +39,34 @@
             </div>
           </div>
         </md-content>
+
+        <br>
+
+        <md-list>
+          <md-subheader class="md-primary">Format</md-subheader>
+          <md-list-item>
+            <!-- make it look more like "[ ] > Video    | [ ] > Music   " with equal sites and spacing -->
+            <md-radio v-model="format" value="video"><md-icon>play_arrow</md-icon> Video</md-radio> <!-- arrow would maybe look better if it were hollow -->
+            <md-radio v-model="format" value="audio"><md-icon>music_note</md-icon> Music</md-radio> <!-- should be double note -->
+          </md-list-item>
+        </md-list>
+
+        <md-list v-if="format === 'video'">
+          <md-subheader :md-disabled="format !== 'video'" class="md-primary">Video Settings</md-subheader>
+          <md-list-item>
+            <md-field>
+              <!-- should have label next to select: "Resolution    [ 1080p ^ ]" -->
+              <label for="dlRes">Resolution</label>
+              <md-select v-model="dlRes" name="dlRes" id="dlRes">
+                <md-option value="1080">1080p</md-option>
+              </md-select>
+            </md-field>
+          </md-list-item>
+        </md-list>
+
+        <md-list>
+          <md-subheader class="md-primary">Audio Settings</md-subheader>
+        </md-list>
       </md-app-content>
     </md-app>
   </div>
@@ -90,7 +118,9 @@ export default {
   data: () => ({
     isDownloadingMeta: false,
     isMetaView: false,
-    meta: {}
+    meta: {},
+    format: '',
+    dlRes: ''
   }),
   methods: {
     async downloadBtn() {
@@ -104,6 +134,8 @@ export default {
       this.$data.meta = meta
       this.$data.isMetaView = true
       this.$data.isDownloadingMeta = false
+
+      this.$data.format = 'video'
     }
   }
 }
