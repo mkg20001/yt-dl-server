@@ -32,7 +32,7 @@
       <md-app-content v-else>
         <md-content class="md-elevation-7" style="padding: 1em">
           <div class="m-table">
-            <img :src="meta.thumbnail" style="width: 24em"></img>
+            <img :src="meta.thumbnail" style="height: 9em; max-width: 100%;"></img>
             <div>
               <h1>{{ meta.title }}</h1>
               <h2>...</h2>
