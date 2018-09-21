@@ -20,6 +20,7 @@ const mongoose = require('mongoose')
 const Schema = require('./schema')
 
 const fs = require('fs')
+const path = require('path')
 
 const init = async (config) => {
   const {storage, mongodb} = config
@@ -231,6 +232,28 @@ const init = async (config) => {
 
     log.info({url: db.url, out: db.stored}, 'Downloaded %s', db.url)
   }))
+
+  const assets = path.join(__dirname, '../dist')
+  server.route({
+    method: 'GET',
+    path: '/{param*}',
+    handler: async (request, h) => {
+      let p = path.join(assets, request.path)
+      if (fs.existsSync(p)) {
+        return h.file(p, {confine: false})
+      } else {
+        return h.file(path.join(assets, 'index.html'), {confine: false})
+      }
+    }
+  })
+
+  server.route({
+    method: 'GET',
+    path: '/',
+    handler: async (request, h) => {
+      return h.file(path.join(assets, 'index.html'), {confine: false})
+    }
+  })
 
   await server.start()
 }

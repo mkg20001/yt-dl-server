@@ -10,7 +10,9 @@
     "node-fetch": "whatwg-fetch"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rm -rf dist && npx parcel build public/index.html",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "youtube-dl",
@@ -21,7 +23,7 @@
   "files": [
     "src/*.js",
     "bin.js",
-    "assets"
+    "dist/**/*"
   ],
   "devDependencies": {
     "@vue/component-compiler-utils": "^2.2.0",

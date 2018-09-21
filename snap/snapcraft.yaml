@@ -24,3 +24,7 @@ parts:
     plugin: nodejs
     node-engine: 10.10.0
     source: .
+    override-build: |
+      npm i
+      npm run prepublishOnly
+      snapcraftctl build
