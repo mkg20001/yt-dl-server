@@ -22,16 +22,16 @@ const Schema = require('./schema')
 const fs = require('fs')
 
 const init = async (config) => {
-  const {storage} = config
+  const {storage, mongodb} = config
   const {Media} = Schema(config)
 
   mongoose.connect(config.mongodb)
 
+  const mongodbDB = mongodb.split('/').pop().split('?').shift() // get uppercase part: mongodb://url:port/DB?something
   config.hapi.cache = [{
-    name: 'mongoDbCache',
     engine: CatboxMongoDB,
-    uri: config.mongodb,
-    partition: config.mongodb.split('/').pop().split('?').shift()
+    uri: mongodb,
+    partition: mongodbDB
   }]
 
   const server = Hapi.server(config.hapi)
